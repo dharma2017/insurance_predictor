@@ -78,6 +78,17 @@ if st.button("Predict Insurance Premium", help="Click to calculate your estimate
             'region_southeast': [1 if region == 'southeast' else 0],
             'region_southwest': [1 if region == 'southwest' else 0]
         }
+
+        df_original = pd.read_csv('Health_Insurance.csv')
+        matching_row = df_original[
+            ((df_original['age'] >= age-1) | (df_original['age'] <= age+1)) & 
+            (df_original['sex'] == sex) & 
+            ((df_original['bmi'] >= bmi-1) | (df_original['bmi'] <= bmi+1)) & 
+            (df_original['children'] == children) & 
+            (df_original['smoker'] == smoker) & 
+            (df_original['region'] == region)
+        ]
+       
         
         # Create DataFrame with explicit feature order
         input_processed = pd.DataFrame(columns=feature_order)
@@ -94,6 +105,12 @@ if st.button("Predict Insurance Premium", help="Click to calculate your estimate
         original_premium = np.expm1(log1p_prediction)  # Using expm1 (inverse of log1p)
         yearly_premium = round(original_premium, 2)
         monthly_premium = round(yearly_premium / 12, 2)
+
+        # Compare with actual value
+        if not matching_row.empty:
+            actual_premium = matching_row['charges'].values[0]
+            error = abs(actual_premium - yearly_premium)
+            error_pct = (error / actual_premium) * 100
         
         # Display results in an expander
         with st.expander("View Prediction Results", expanded=True):
@@ -118,7 +135,13 @@ if st.button("Predict Insurance Premium", help="Click to calculate your estimate
                 st.warning("High-risk factors identified: " + ", ".join(risk_factors))
             else:
                 st.success("No major risk factors identified")
-            
+            # Display prediction accuracy
+            if not matching_row.empty:
+                st.markdown("### Prediction Accuracy:")
+                st.markdown(f"- **Expected premium:** ₹{actual_premium:,.2f}")
+                st.markdown(f"- **Predicted premium:** ₹{yearly_premium:,.2f}")
+                st.markdown(f"- **Absolute error:** ₹{error:,.2f}")
+                st.markdown(f"- **Error percentage:** {error_pct:.2f}%")
             # Additional Information
             st.info("""
             **Note:** This is an estimate based on the model trained on historical data. 
